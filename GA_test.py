@@ -77,48 +77,47 @@ convergence_threshold = 1  # Define a threshold for early stopping
 runs = 2000
 
 generation_average  = []
-population_size = []
+retain_percentage = []
 runt_times = []
 
-# z_values = [i / 10.0 for i in range(1,11)]
+z_values = range(50, 300, 50)
 
-# for z in z_values:  
-start_time = time.time()
-number_of_generations = 0
-for y in range(runs):
-    p = population(p_count, i_length, i_min, i_max)
-    target = randint(0, 500)
-    fitness_history = [grade(p, target)]
-    for i in range(generations):
-        p = evolve(p, target, mutate=0.05, random_select=0.05, retain=0.2)
-        current_fitness = grade(p, target)
-        fitness_history.append(current_fitness)
-        if current_fitness == 0:
-            break
-        elif current_fitness < convergence_threshold:
-            break
-    if i == generations - 1:
-        print(f"Failed to converge after {generations} generations.")
-    number_of_generations += i
-end_time = time.time()
+for z in z_values:  
+    start_time = time.time()
+    number_of_generations = 0
+    for y in range(runs):
+        p = population(z, i_length, i_min, i_max)
+        target = randint(0, 500)
+        fitness_history = [grade(p, target)]
+        for i in range(generations):
+            p = evolve(p, target, mutate=0.05, random_select=0.05, retain=0.15)
+            current_fitness = grade(p, target)
+            fitness_history.append(current_fitness)
+            if current_fitness == 0:
+                break
+            elif current_fitness < convergence_threshold:
+                break
+        # if i == generations - 1:
+        #     print(f"Failed to converge after {generations} generations.")
+        number_of_generations += i
+    end_time = time.time()
 
+    generation_average.append(number_of_generations / runs)
+    retain_percentage.append(z)
+    runt_times.append(end_time - start_time)
+    print(f"Run {z}")
 
-print(f"Average number of generations to converge: {number_of_generations / runs}")
-# generation_average.append(number_of_generations / runs)
-# population_size.append(z)
-print(f"Time taken: {end_time - start_time}")
-runt_times.append(end_time - start_time)    
 
 # for datum in fitness_history:
 #     print(datum)
 
-# plt.title('Retain percentage effect on generations to converge')
-# plt.xlabel('Retain percentage')
-# plt.ylabel('Generatisons to converge')
-# plt.plot(population_size, runt_times, label='Time taken')
-# plt.plot(population_size, generation_average, label='Generations to converge')
-# plt.show()
+plt.title('Population effect on generations to converge')
+plt.xlabel('Population size')
+plt.ylabel('Generations to converge')
+plt.plot(retain_percentage, runt_times, label='Time taken', color='orange')
+plt.plot(retain_percentage, generation_average, label='Generations to converge', color='blue')
+plt.legend()
+plt.show()
 
 
-# Generate random data
-# Generate random data
+
