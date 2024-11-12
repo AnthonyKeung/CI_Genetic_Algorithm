@@ -23,8 +23,7 @@ def fitness(individual, target):
     individual: the individual to evaluate
     target: the target number individuals are aiming for
     """
-    sum_values = sum(individual)
-    return abs(target - sum_values)
+    return sum(abs(target - x) for x in individual)
 
 def grade(pop, target):
     """ Find average fitness for a population."""
@@ -71,10 +70,10 @@ p_count = 200
 i_length = 5
 i_min = 0
 i_max = 100
-generations = 100
+generations = 200
 convergence_threshold = 1  # Define a threshold for early stopping
 
-runs = 2000
+runs = 100
 
 generation_average  = []
 retain_percentage = []
@@ -82,42 +81,44 @@ runt_times = []
 
 z_values = range(50, 300, 50)
 
-for z in z_values:  
-    start_time = time.time()
-    number_of_generations = 0
-    for y in range(runs):
-        p = population(z, i_length, i_min, i_max)
-        target = randint(0, 500)
-        fitness_history = [grade(p, target)]
-        for i in range(generations):
-            p = evolve(p, target, mutate=0.05, random_select=0.05, retain=0.15)
-            current_fitness = grade(p, target)
-            fitness_history.append(current_fitness)
-            if current_fitness == 0:
-                break
-            elif current_fitness < convergence_threshold:
-                break
-        # if i == generations - 1:
-        #     print(f"Failed to converge after {generations} generations.")
-        number_of_generations += i
-    end_time = time.time()
+# for z in z_values:  
+start_time = time.time()
+number_of_generations = 0
+for y in range(runs):
+    p = population(p_count, i_length, i_min, i_max)
+    target = 50
+    fitness_history = [grade(p, target)]
+    for i in range(generations):
+        p = evolve(p, target, mutate=0.028, random_select=0.05, retain=0.11)
+        current_fitness = grade(p, target)
+        fitness_history.append(current_fitness)
+        if current_fitness == 0:
+            print(f"Converged after {i} generations.")
+            break
+        elif current_fitness < convergence_threshold:
+            print(f"Converged after {i} generations.")
+            break
+    # if i == generations - 1:
+    #     print(f"Failed to converge after {generations} generations.")
+    number_of_generations += i
+end_time = time.time()
 
-    generation_average.append(number_of_generations / runs)
-    retain_percentage.append(z)
-    runt_times.append(end_time - start_time)
-    print(f"Run {z}")
+print(f"Average number of generations to converge: {number_of_generations / runs}")
+# generation_average.append(number_of_generations / runs)
+# retain_percentage.append(z)
+# runt_times.append(end_time - start_time)
 
 
 # for datum in fitness_history:
 #     print(datum)
 
-plt.title('Population effect on generations to converge')
-plt.xlabel('Population size')
-plt.ylabel('Generations to converge')
-plt.plot(retain_percentage, runt_times, label='Time taken', color='orange')
-plt.plot(retain_percentage, generation_average, label='Generations to converge', color='blue')
-plt.legend()
-plt.show()
+# plt.title('Population effect on generations to converge')
+# plt.xlabel('Population size')
+# plt.ylabel('Generations to converge')
+# plt.plot(retain_percentage, runt_times, label='Time taken', color='orange')
+# plt.plot(retain_percentage, generation_average, label='Generations to converge', color='blue')
+# plt.legend()
+# plt.show()
 
 
 
