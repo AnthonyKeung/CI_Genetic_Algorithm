@@ -1,0 +1,160 @@
+from random import randint, random
+import numpy as np
+import matplotlib.pyplot as plt
+
+def individual(length, min, max):
+    """ Create a member of the population."""
+    return [randint(min, max) for x in range(length)]
+
+def population(count, length, min, max):
+    """
+    Create a number of individuals (i.e. a population).
+    count: the number of individuals in the population
+    length: the number of values per individual
+    min: the minimum possible value in an individual's list of values
+    max: the maximum possible value in an individual's list of values
+    """
+    return [individual(length, min, max) for x in range(count)]
+
+
+def fitness(individual, target, X_test_values):
+    errors = []
+    for x in X_test_values:
+        target_y_value = target[0] * x**5 +target[1] * x**4 + target[2] * x**3 + target[3] * x**2 + target[4] * x + target[5] 
+        individual_y_value = individual[0] * x**5 + individual[1] * x**4 + individual[2] * x**3 + individual[3] * x**2 + individual[4] * x + individual[5]
+        errors.append(abs(target_y_value - individual_y_value)) 
+    return sum(errors)
+
+
+def grade(pop, target, X_values):
+    """ Find average fitness for a population."""
+    summed = sum(fitness(x, target, X_values) for x in pop)
+    return summed / (len(pop) * 1.0)
+
+def evolve(pop, target, retain=0.2, random_select=0.05, mutate=0.1, X_test_values = np.linspace(-100, 100, 200)):
+    graded = [(fitness(x, target, X_test_values), x) for x in pop]
+    graded = [x for x in sorted(graded)]
+    binary_graded = population_to_twos_complement([x[1] for x in graded])
+    retain_length =  int(len(binary_graded)*retain)
+
+    parents = binary_graded[:retain_length]
+
+    # randomly add other individuals to promote genetic diversity
+    for individual in binary_graded[retain_length:]:
+        if random_select > random():
+            parents.append(individual)
+
+    # crossover parents to create children
+    parents_length = len(parents)
+    desired_length = len(pop) - parents_length
+    children = []
+    while len(children) < desired_length:
+        male = randint(0, parents_length - 1)
+        female = randint(0, parents_length - 1)
+        if male != female:
+            male = parents[male]
+            female = parents[female]
+            #using one point crossover
+            half = 24 #8*6 = 48 which half is 24
+            child = male[:half] + female[half:]
+            children.append(child)
+    parents.extend(children)
+    print(parents[0])
+
+    # mutate some individuals
+    for individual in parents:
+        if mutate > random():
+            pos_to_mutate = randint(0, len(individual) - 1)
+            #flip the bit 
+            individual =  individual[:pos_to_mutate] + ('1' if individual[pos_to_mutate] == '0' else '0') + individual[pos_to_mutate+1:]
+    return parents
+
+def int_to_twos_complement(value, bits):
+    if value < 0:
+        value = (1 << bits) + value
+    format_string = '{:0' + str(bits) + 'b}'
+    return format_string.format(value)
+
+def population_to_twos_complement(population, bits=8):
+    binary_population = []
+    for individual in population:
+        binary_individual = [int_to_twos_complement(mem, bits) for mem in individual]
+        combined_binary = ''.join(binary_individual)
+        binary_population.append(combined_binary)
+    return binary_population #['111001000010010000100111000111111111101001011001', '001000110011110101011011110100100100001001000010',
+
+def twos_complement_to_decimal(binary_str):
+    if binary_str[0] == '1':
+        return -((1 << len(binary_str)) - int(binary_str, 2))
+    else:
+        return int(binary_str, 2)
+    
+def binary_decimal(parents):
+    decimal_list = []
+    for parent in parents:
+        decimal = []
+        for i in range(int(len(parent)/8)):
+            mod_i = i*8
+            decimal.append(twos_complement_to_decimal(parent[mod_i : mod_i +8]))
+        decimal_list.append(decimal)  
+    return decimal_list
+
+
+
+target = [25, 18, 31, -14, 7, -19]
+p_count = 1000
+i_length = 6
+i_min = -127
+i_max = 127
+generations = 100
+convergence_threshold = 0.04
+runs = 1
+average_generations = []
+x_test_values = np.linspace(-100, 100, 10)
+
+
+for run in range(runs):
+    p = population(p_count, i_length, i_min, i_max)
+    for i in range(generations):
+        p = evolve(p, target, mutate=1, retain=0.15, X_test_values = x_test_values)
+        p = binary_decimal(p)
+        current_fitness = grade(p, target, x_test_values)
+        print(p[0], current_fitness)
+        if current_fitness == 0:
+            print(f"Converged after {i} generations.")
+            break
+        elif current_fitness < convergence_threshold:
+            print(f"Converged after {i} generations.")
+            break
+        # fitness_history.append(current_fitness)
+        print("Generation" , i)
+    average_generations.append(i)
+    print("finished run", run)
+
+print(sum(average_generations) / len(average_generations))
+
+#Plan for Excercise 5 
+
+# Using 2s compliment binary encode my list of 6 numbers 
+# so I want each memebwer to be 8 bits long 
+#This functino will take a list of numbers and convert them to 2s compliment binary
+#doesnt' matter from decimal to binary just pick one representation 
+
+#work out the fitness of every indivual within the population
+
+#using roulette wheel selection select 2 parents
+
+#using 1 point crossover or unifor? and a crossover rate of 0.7 crossover the parents
+
+#using mutation rate of 0.001 mutate the offspring
+
+#get numbers back check if they match 
+
+#Resuse as much of his code as possible 
+
+# Identify Schema 
+#  selection effect, crossover effect and mutation effect 
+# dong wants quantiatively gbased on example. 
+
+
+

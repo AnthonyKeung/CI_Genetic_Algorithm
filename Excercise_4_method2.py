@@ -1,5 +1,6 @@
 from random import randint, random
 from operator import add
+import numpy as np
 import matplotlib.pyplot as plt
 
 def individual(length, min, max):
@@ -16,40 +17,23 @@ def population(count, length, min, max):
     """
     return [individual(length, min, max) for x in range(count)]
 
-def fitness(individual, target):
-    """
-    Determine the fitness of an individual. Higher is better.
-    individual: the individual to evaluate
-    target: the target number individuals are aiming for
-    """
-    error = []
-    for i,member in enumerate(individual):
-        error.append(abs(member - target[i]))
-    return sum(error)
+def fitness(individual, target, X_test_values):
 
-def grade(pop, target):
+    errors = []
+    for x in X_test_values:
+        target_y_value = target[0] * x**5 +target[1] * x**4 + target[2] * x**3 + target[3] * x**2 + target[4] * x + target[5] 
+        individual_y_value = individual[0] * x**5 + individual[1] * x**4 + individual[2] * x**3 + individual[3] * x**2 + individual[4] * x + individual[5]
+        errors.append(abs(target_y_value - individual_y_value))
+    return sum(errors)
+
+
+def grade(pop, target, X_values):
     """ Find average fitness for a population."""
-    summed = sum(fitness(x, target) for x in pop)
+    summed = sum(fitness(x, target, X_values) for x in pop)
     return summed / (len(pop) * 1.0)
 
-def twos_complement_to_decimal(binary_str):
-    if binary_str[0] == '1':
-        return -((1 << len(binary_str)) - int(binary_str, 2))
-    else:
-        return int(binary_str, 2)
-    
-def binary_decimal(parents):
-    decimal_list = []
-    for parent in parents:
-        decimal = []
-        for i in range(int(len(parent)/8)):
-            mod_i = i*7
-            decimal.append(twos_complement_to_decimal(parent[mod_i : mod_i +7]))
-        decimal_list.append(decimal)  
-    print(decimal_list)
-
-def evolve(pop, target, retain=0.2, random_select=0.05, mutate=0.01):
-    graded = [(fitness(x, target), x) for x in pop]
+def evolve(pop, target, retain=0.2, random_select=0.05, mutate=0.1, X_test_values = np.linspace(-100, 100, 200)):
+    graded = [(fitness(x, target, X_test_values), x) for x in pop]
     graded = [x[1] for x in sorted(graded)]
     retain_length = int(len(graded) * retain)
     parents = graded[:retain_length]
@@ -59,12 +43,6 @@ def evolve(pop, target, retain=0.2, random_select=0.05, mutate=0.01):
         if random_select > random():
             parents.append(individual)
 
-    # mutate some individuals
-    for individual in parents:
-        if mutate > random():
-            pos_to_mutate = randint(0, len(individual) - 1)
-            # this mutation is not ideal, because it restricts the range of possible values
-            individual[pos_to_mutate] = randint(min(individual), max(individual))
 
     # crossover parents to create children
     parents_length = len(parents)
@@ -80,6 +58,13 @@ def evolve(pop, target, retain=0.2, random_select=0.05, mutate=0.01):
             child = male[:half] + female[half:]
             children.append(child)
     parents.extend(children)
+
+    # mutate some individuals
+    for individual in parents:
+        if mutate > random():
+            pos_to_mutate = randint(0, len(individual) - 1)
+            # this mutation is not ideal, because it restricts the range of possible values
+            individual[pos_to_mutate] = randint(-100, 100)
     return parents
 
 # Example usage
@@ -88,36 +73,39 @@ p_count = 1000
 i_length = 6
 i_min = -100
 i_max = 100
-generations = 200
+generations = 100
 convergence_threshold = 0.04
-runs = 100
+x_test_values = np.linspace(-100, 100, 10)
+error_log = []
 average_generations = []
 
 
-for run in range(runs):
+for run in range(1):
     p = population(p_count, i_length, i_min, i_max)
     for i in range(generations):
-        p = evolve(p, target, mutate=0.1, retain=0.1)
-        print("population is",p)
-        p = binary_decimal(p)
-        current_fitness = grade(p, target)
+        p = evolve(p, target, mutate=0.35, retain=0.15, X_test_values=x_test_values)
+        current_fitness = grade(p, target, x_test_values)
+        error_log.append(current_fitness)
+        print(p[0], current_fitness)
 
-        if normalised_fitness == 0:
+        #check for convergence based on fittest individual
+        fittest_individual_grade = fitness(p[0],target= target, X_test_values=x_test_values)
+
+        if fittest_individual_grade == 0:
+            print(f"Perfect after {i} generations.")
+            break
+        elif fittest_individual_grade < convergence_threshold:
             print(f"Converged after {i} generations.")
             break
-        elif normalised_fitness < convergence_threshold:
-            print(f"Converged after {i} generations.")
-            break
-        # fitness_history.append(current_fitness)
     average_generations.append(i)
-    print("finished run", run)
+
 
 print(sum(average_generations) / len(average_generations))
 
 
 
-# plt.xlabel('Generations over time')
-# plt.ylabel('Average Fitness')
-# plt.title('Fitness over Generations')
-# plt.plot(fitness_history)
-# plt.show()
+plt.xlabel('Generations over time')
+plt.ylabel('Average Fitness')
+plt.title('Fitness over Generations')
+plt.plot(error_log)
+plt.show()
