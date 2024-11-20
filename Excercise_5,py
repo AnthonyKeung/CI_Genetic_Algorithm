@@ -1,4 +1,4 @@
-from random import randint, random
+from random import randint, random, choices
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -23,7 +23,8 @@ def fitness(individual, target, X_test_values):
         target_y_value = target[0] * x**5 +target[1] * x**4 + target[2] * x**3 + target[3] * x**2 + target[4] * x + target[5] 
         individual_y_value = individual[0] * x**5 + individual[1] * x**4 + individual[2] * x**3 + individual[3] * x**2 + individual[4] * x + individual[5]
         errors.append(abs(target_y_value - individual_y_value)) 
-    return sum(errors)
+        normalised_error = 1 / (1 + sum(errors))
+    return normalised_error
 
 
 def grade(pop, target, X_values):
@@ -33,14 +34,23 @@ def grade(pop, target, X_values):
 
 def evolve(pop, target, retain=0.2, random_select=0.05, mutate=0.1, X_test_values = np.linspace(-100, 100, 200)):
     graded = [(fitness(x, target, X_test_values), x) for x in pop]
-    graded = [x for x in sorted(graded)]
-    binary_graded = population_to_twos_complement([x[1] for x in graded])
-    retain_length =  int(len(binary_graded)*retain)
+    retain_length =  int(len(graded)*retain)
 
-    parents = binary_graded[:retain_length]
+    # roullette selection
+    total_fitness = sum([x[0] for x in graded])
+    print("Total Fitness", total_fitness)
+    selection_probs = [(x[0] / total_fitness) for x in graded]
+    parents = []
+    for _ in range(retain_length):
+        parents.append(choices(graded, selection_probs)[0][1])
+    
+
+    parents = population_to_twos_complement(parents)
+    binary_population = population_to_twos_complement(pop)
+
 
     # randomly add other individuals to promote genetic diversity
-    for individual in binary_graded[retain_length:]:
+    for individual in binary_population[retain_length:]:
         if random_select > random():
             parents.append(individual)
 
@@ -55,23 +65,24 @@ def evolve(pop, target, retain=0.2, random_select=0.05, mutate=0.1, X_test_value
             male = parents[male]
             female = parents[female]
 
-            #using two point crossover
-            # crossover_point = randint(0, len(individual) - 1)
-            # crossover_point2 = randint(0, len(individual) - 1)
-            # if crossover_point > crossover_point2:
-            #     crossover_point, crossover_point2 = crossover_point2, crossover_point
-            # child = male[:crossover_point] + female[crossover_point:crossover_point2] + male[crossover_point2:]
+            # using two point crossover
+            crossover_point = randint(0, len(individual) - 1)
+            crossover_point2 = randint(0, len(individual) - 1)
+            if crossover_point > crossover_point2:
+                crossover_point, crossover_point2 = crossover_point2, crossover_point
+            child = male[:crossover_point] + female[crossover_point:crossover_point2] + male[crossover_point2:]
+            children.append(child)
 
             # Using uniform crossover
-            child = []
-            crossover_mask = [randint(0, 1) for _ in range(len(male))]
-            for i in crossover_mask:
-                if i == 1:
-                    child.append(male[i])
-                else:
-                    child.append(female[i])
-            child = ''.join(child)
-            children.append(child)
+            # child = []
+            # crossover_mask = [randint(0, 1) for _ in range(len(male))]
+            # for i in crossover_mask:
+            #     if i == 1:
+            #         child.append(male[i])
+            #     else:
+            #         child.append(female[i])
+            # child = ''.join(child)
+            # children.append(child)
 
     print("Children", len(children))
     parents.extend(children)
@@ -79,7 +90,7 @@ def evolve(pop, target, retain=0.2, random_select=0.05, mutate=0.1, X_test_value
     # mutate some individuals
     for individual in parents:
         if mutate > random():
-            for _ in range(48):
+            for _ in range(96):
                 pos_to_mutate = randint(0, len(individual) - 1)
                 #flip the bit 
                 individual =  individual[:pos_to_mutate] + ('1' if individual[pos_to_mutate] == '0' else '0') + individual[pos_to_mutate+1:]
@@ -132,17 +143,17 @@ x_test_values = np.linspace(-128, 127, 10)
 for run in range(runs):
     p = population(p_count, i_length, i_min, i_max)
     for i in range(generations):
-        p = evolve(p, target, mutate=0.9, retain=0.10, X_test_values = x_test_values)
+        p = evolve(p, target, mutate=0.5, retain=0.1,random_select=0.1, X_test_values = x_test_values)
         p = binary_decimal(p)
         current_fitness = grade(p, target, x_test_values)
         fitness_history.append(current_fitness)
         print(p[0:10], current_fitness)
-        if current_fitness == 0:
-            print(f"Converged after {i} generations.")
-            break
-        elif current_fitness < convergence_threshold:
-            print(f"Converged after {i} generations.")
-            break
+        # if current_fitness == 0:
+        #     print(f"Converged after {i} generations.")
+        #     break
+        # elif current_fitness < convergence_threshold:
+        #     print(f"Converged after {i} generations.")
+        #     break
         # fitness_history.append(current_fitness)
         print("Generation" , i)
 
