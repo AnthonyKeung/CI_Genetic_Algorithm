@@ -38,7 +38,6 @@ def evolve(pop, target, retain=0.2, random_select=0.05, mutate=0.1, X_test_value
 
     # roullette selection
     total_fitness = sum([x[0] for x in graded])
-    print("Total Fitness", total_fitness)
     selection_probs = [(x[0] / total_fitness) for x in graded]
     parents = []
     for _ in range(retain_length):
@@ -65,13 +64,18 @@ def evolve(pop, target, retain=0.2, random_select=0.05, mutate=0.1, X_test_value
             male = parents[male]
             female = parents[female]
 
-            # using two point crossover
+            #using single point crossover 
             crossover_point = randint(0, len(individual) - 1)
-            crossover_point2 = randint(0, len(individual) - 1)
-            if crossover_point > crossover_point2:
-                crossover_point, crossover_point2 = crossover_point2, crossover_point
-            child = male[:crossover_point] + female[crossover_point:crossover_point2] + male[crossover_point2:]
+            child = male[:crossover_point] + female[crossover_point:]
             children.append(child)
+
+            # using two point crossover
+            # crossover_point = randint(0, len(individual) - 1)
+            # crossover_point2 = randint(0, len(individual) - 1)
+            # if crossover_point > crossover_point2:
+            #     crossover_point, crossover_point2 = crossover_point2, crossover_point
+            # child = male[:crossover_point] + female[crossover_point:crossover_point2] + male[crossover_point2:]
+            # children.append(child)
 
             # Using uniform crossover
             # child = []
@@ -83,8 +87,6 @@ def evolve(pop, target, retain=0.2, random_select=0.05, mutate=0.1, X_test_value
             #         child.append(female[i])
             # child = ''.join(child)
             # children.append(child)
-
-    print("Children", len(children))
     parents.extend(children)
 
     # mutate some individuals
@@ -142,26 +144,54 @@ x_test_values = np.linspace(-128, 127, 10)
 
 for run in range(runs):
     p = population(p_count, i_length, i_min, i_max)
+    #plot H against generations and average fitness against generations
+    H_average_fitness = []
+    population_average_fitness = []
+    instances_of_H = []
+    predicted_values_for_H = [0]
     for i in range(generations):
+        pop_with_fitness = [(fitness(x, target, x_test_values), ''.join([int_to_twos_complement(mem, 8) for mem in x])) for x in p]
         p = evolve(p, target, mutate=0.5, retain=0.1,random_select=0.1, X_test_values = x_test_values)
+
+        # Work out average fitness of H 
+        H = '11110010' # 31
+        instances = 0
+        H_fitness = 0
+        total_fitness = 0
+
+        for individual in pop_with_fitness:
+            if H in individual[1]:
+                instances += 1
+                H_fitness += individual[0]
+            total_fitness += individual[0]
+
+        predicted_values_for_H.append(len(pop_with_fitness)*H_fitness/total_fitness)
+        H_average_fitness.append(H_fitness/(instances+1))
+        population_average_fitness.append(total_fitness/(len(pop_with_fitness)+1)) 
+        instances_of_H.append(instances) 
+
+
         p = binary_decimal(p)
         current_fitness = grade(p, target, x_test_values)
         fitness_history.append(current_fitness)
         print(p[0:10], current_fitness)
-        # if current_fitness == 0:
-        #     print(f"Converged after {i} generations.")
-        #     break
-        # elif current_fitness < convergence_threshold:
-        #     print(f"Converged after {i} generations.")
-        #     break
-        # fitness_history.append(current_fitness)
         print("Generation" , i)
 
 
+plt.xlabel('Generations over time')
+plt.ylabel('Fitness')
+plt.title('Fitness over Generations')
+plt.plot(H_average_fitness, label='H Average Fitness')
+plt.plot(population_average_fitness, label='Population Average Fitness')
+plt.legend()
+plt.figure()
+
 
 plt.xlabel('Generations over time')
-plt.ylabel('Average Fitness')
-plt.title('Fitness over Generations')
-plt.plot(fitness_history)
+plt.ylabel('Instances of H')
+plt.title('Instances of H over Generations')
+plt.plot(instances_of_H, label='Instances of H')
+plt.plot(predicted_values_for_H, label='Predicted Values for H')
+plt.legend()
 plt.show()
 
